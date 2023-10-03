@@ -65,11 +65,14 @@ def station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g):
         v_8 = np.sqrt(T_8*R*k_g)
         A_8 = (m_air+m_fuel) * R * T_8 / (P_8 * v_8)  # Exhaust area
         F_G_calc = (m_air+m_fuel)*v_8 + A_8 * (P_8 - P_a)
+        nozzle_status = 'choked'
     else:
         v_8 = np.sqrt(2 * cp_g * eta_noz * T_t7 * (1 - (P_t7 / P_a) ** (-(k_g - 1) / k_g)))
         F_G_calc = (m_air+m_fuel)*v_8
-    return F_G_calc
+        nozzle_status = 'not choked'
+    return F_G_calc, nozzle_status
 
-F_G_calc = station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g)
+F_G_calc, nozzle_status = station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g)
 
 print("Gross thrust at sealevel is:",F_G_calc)
+print("The nozzle is ", nozzle_status)
