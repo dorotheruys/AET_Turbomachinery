@@ -55,7 +55,8 @@ def station_5(m_air,m_fuel,cp_g,T_t4,W_comp,eta_turb,P_t4):
     P_t5 = ((((T_t5 / T_t4 - 1) / -eta_turb) - 1) * -1) ** (k_g / (k_g - 1)) * P_t4
     return P_t5, T_t5
 
-P_t7,T_t7 = station_5(m_air,m_fuel,cp_g,T_t4,W_comp,eta_turb,P_t4)
+P_t5,T_t5 = station_5(m_air,m_fuel,cp_g,T_t4,W_comp,eta_turb,P_t4)
+P_t7,T_t7 = P_t5,T_t5
 
 def station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g):
     crit_ratio = (1-1/eta_noz*((k_g-1)/(k_g+1)))**(-k_g/(k_g-1))
@@ -75,4 +76,12 @@ def station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g):
 F_G_calc, nozzle_status = station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g)
 
 print("Gross thrust at sealevel is:",F_G_calc)
+
+def area_ratio(P_t7,P_t4,k_g):
+    A_t_to_A_n = (P_t7/P_t4)**((k_g+1)/(2*k_g))
+    return A_t_to_A_n
+
+A_t_to_A_n = area_ratio(P_t7,P_t4,k_g)
+
+print("The turbine to propulsive nozzle area ratio is:", A_t_to_A_n)
 print("The nozzle is ", nozzle_status)
