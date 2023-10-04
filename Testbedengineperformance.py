@@ -1,5 +1,6 @@
 import numpy as np
 
+print("Testbed performance ---------------------------------------------------------")
 #Datasheet
 F_G = 15167 #N
 m_air = 23.81 #kg/s
@@ -16,13 +17,13 @@ eta_noz = 1
 LHV = 43*10**6 #Lower heating value
 
 #Estimated values (These can be played with to ensure that the gross thrust is 15167 N at sea level)
-eta_comp = 0.90**2 #Efficiency of assignment 1 for both compressors
-eta_turb = 0.877**2 #Efficiency of assignment 1 for both turbines
-A = 4 #m^2 Find value from datasheet of Viper engine?
+eta_comp = 0.8059 #Efficiency of assignment 1 for both compressors 0.9^2
+eta_turb = eta_comp*0.957 #Efficiency of assignment 1 for both turbines   0.877^2
+A_inlet = 0.624**2*np.pi #Inlet area calculater with the diameter of the viper engine
 
 #Initial calculations
-rho_0 = P_a/(T_a*R) #kg/m^3
-v_0 = m_air/(rho_0*A)
+rho = P_a/(T_a*R) #kg/m^3
+v_0 = m_air/(rho*A_inlet)
 a_0 = np.sqrt(k_a*R*T_a)
 M_0 = v_0/a_0
 
@@ -84,4 +85,4 @@ def area_ratio(P_t7,P_t4,k_g):
 A_t_to_A_n = area_ratio(P_t7,P_t4,k_g)
 
 print("The turbine to propulsive nozzle area ratio is:", A_t_to_A_n)
-print("The nozzle is ", nozzle_status)
+print("The nozzle is ",nozzle_status)
