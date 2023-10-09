@@ -17,12 +17,28 @@ def flow_angle_equations(vars, work_coef, flow_coef, R):
 def find_flow_angles_alpha1_beta2(work_coef, flow_coef, R):
     initial_guess = np.array([0.0, 0.0])  # Initial guess for alpha1 and beta2
     solution = fsolve(flow_angle_equations, initial_guess, args=(work_coef, flow_coef, R))
-    return solution[0], solution[1]
 
-def determine_velocity_triangles(flow_coef, U, alpha1, beta2):
+    alpha1 = solution[0]
+    beta2 = solution[1]
+
+    # checks
+    print('Checks')
+    if beta2 < 0.:
+        print('Beta2 true')
+    else:
+        print('Beta2 false')
+
+    if alpha1 > 0.:
+        print('Alpha1 true')
+    else:
+        print('Alpha1 false')
+    return alpha1, beta2
+
+def determine_velocity_triangles(flow_coef, U, alpha1, beta2, specific_work_stage):
+    # Stays constant for all stages: Vm, U, beta2, alpha1, Vt
     V_m = U * flow_coef                 # Definition flow coefficient, stays constant over rotor blade
     W_2 = V_m / np.cos(beta2)           # cos(beta2) = V_m/W_2
-    V_t2 = U - V_m * np.tan(beta2)
+    V_t2 = U - abs(V_m * np.tan(beta2))
     alpha2 = np.arctan(V_t2 / V_m)      # tan(alpha2) = V_t2/V_m
     V_2 = V_m / np.cos(alpha2)          # cos(alpha2) = V_m/V_2
 
@@ -31,6 +47,30 @@ def determine_velocity_triangles(flow_coef, U, alpha1, beta2):
     beta1 = np.arctan((U - V_t1)/V_m)
     W_1 = V_m / np.cos(beta1)           # cos(beta1) = V_m/W_1
 
+    delta_Vt = (V_t2 - V_t1)
+
+    # checks
+    if (work_coef - (1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))) <= 10e-6:
+        print('Flow coef true')
+    else:
+        print("Flow coef false")
+        print('Difference: ', (work_coef-(1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))))
+
+    if abs(specific_work_stage - (U * delta_Vt)) <= 10e-6:
+        print('Specific work true')
+    else:
+        print('Specific work false')
+        print("Difference: ", abs(specific_work_stage - (U * delta_Vt)))
+
+    if alpha2 > 0.:
+        print('Alpha2 true')
+    else:
+        print('Alpha2 false')
+
+    if beta1 > 0.:
+        print('Beta1 true')
+    else:
+        print('Beta1 false')
     return V_1, W_1, beta1, V_2, W_2, alpha2, V_m
 
 def plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U):
@@ -115,7 +155,7 @@ def compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, mass_flow, R, work_coef, f
 
     # Determine flow angles & velocity triangles for each stage
     alpha1, beta2 = find_flow_angles_alpha1_beta2(work_coef, flow_coef, R)  # output in radians
-    V_1, W_1, beta1, V_2, W_2, alpha2, V_m = determine_velocity_triangles(flow_coef, U, alpha1, beta2)
+    V_1, W_1, beta1, V_2, W_2, alpha2, V_m = determine_velocity_triangles(flow_coef, U, alpha1, beta2, specific_work/nr_stages)
     plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U)
 
     # Run through each stage and determine the thermodynamic properties
