@@ -15,7 +15,7 @@ def flow_angle_equations(vars, work_coef, flow_coef, R):
     return [eq1, eq2]
 
 def find_flow_angles_alpha1_beta2(work_coef, flow_coef, R):
-    initial_guess = np.array([0.0, 0.0])  # Initial guess for alpha1 and beta2
+    initial_guess = np.array([1., -1.])  # Initial guess for alpha1 and beta2
     solution = fsolve(flow_angle_equations, initial_guess, args=(work_coef, flow_coef, R))
 
     alpha1 = solution[0]
@@ -35,10 +35,12 @@ def find_flow_angles_alpha1_beta2(work_coef, flow_coef, R):
     return alpha1, beta2
 
 def determine_velocity_triangles(flow_coef, U, alpha1, beta2, specific_work_stage):
+    # Define absolute beta2
+    beta2 = abs(beta2)
     # Stays constant for all stages: Vm, U, beta2, alpha1, Vt
     V_m = U * flow_coef                 # Definition flow coefficient, stays constant over rotor blade
     W_2 = V_m / np.cos(beta2)           # cos(beta2) = V_m/W_2
-    V_t2 = U - abs(V_m * np.tan(beta2))
+    V_t2 = U - (V_m * np.tan(beta2))
     alpha2 = np.arctan(V_t2 / V_m)      # tan(alpha2) = V_t2/V_m
     V_2 = V_m / np.cos(alpha2)          # cos(alpha2) = V_m/V_2
 
@@ -74,22 +76,24 @@ def determine_velocity_triangles(flow_coef, U, alpha1, beta2, specific_work_stag
     return V_1, W_1, beta1, V_2, W_2, alpha2, V_m
 
 def plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U):
-    angs = [alpha1, beta1, alpha2, beta2, np.pi, np.pi]
+    angs = [alpha1, beta1, alpha2, beta2, np.pi/2, np.pi/2]
     velos = [V_1, W_1, V_2, W_2, U, U]
+    labels = ['V1', 'W1', 'V2', 'W2', 'U', 'U']
     for i in range(len(angs)):
         dx = velos[i] * np.sin(angs[i])
-        dy = velos[i] * np.cos(angs[i])
+        dy = -1 * velos[i] * np.cos(angs[i])
+        labelnow = labels[i]
         if i < 4:
-            plt.arrow(0, 0, dx, dy)
+            plt.plot([0,dx], [0, dy], label=labelnow)
         elif i == 4:
             x0 = velos[1] * np.sin(angs[1])
-            y0 = velos[1] * np.cos(angs[1])
-            plt.arrow(x0, y0, dx, dy)
+            y0 = -1 * velos[1] * np.cos(angs[1])
+            plt.plot([x0, x0 + dx], [y0, y0 + dy], label=labelnow)
         elif i == 4:
             x0 = velos[3] * np.sin(angs[3])
-            y0 = velos[3] * np.cos(angs[3])
-            plt.arrow(x0, y0, dx, dy)
-
+            y0 = -1 * velos[3] * np.cos(angs[3])
+            plt.plot([x0, x0 + dx], [y0, y0 + dy], label=labelnow)
+    plt.legend()
     plt.show()
     return
 
@@ -174,6 +178,7 @@ def compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, mass_flow, R, work_coef, f
         bladeheight_stator = calculate_blade_height(area_stator, r_in)
 
         stagenr_array[2*(stagenr-1)] = stagenr
+        stagenr_array[2*(stagenr-1)+1] = stagenr
         temp_array[2*(stagenr-1)] = Tt_during
         temp_array[2*(stagenr-1)+1] = Tt_after
         pressure_array[2*(stagenr-1)] = Pt_during
@@ -182,7 +187,7 @@ def compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, mass_flow, R, work_coef, f
         bladeheight_array[2*(stagenr-1)+1] = bladeheight_stator
 
         Tt_before = Tt_after
-        Pt_before = Tt_after
+        Pt_before = Pt_after
 
 
     return
@@ -191,6 +196,10 @@ def compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, mass_flow, R, work_coef, f
 # # Example usage:
 work_coef = 0.38
 flow_coef = 0.77
+
+# work_coef = 2.
+# flow_coef = 1.
+
 R = 0.5
 eta_comp = 1.
 r_in = 0.5
