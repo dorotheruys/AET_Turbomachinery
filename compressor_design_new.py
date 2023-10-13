@@ -10,7 +10,7 @@ cp_a = 1000             #J/kg K
 cp_g = 1150             #J/kg K
 def flow_angle_equations(vars, work_coef, flow_coef, R):
     alpha1, beta2 = vars
-    eq1 = 1 - flow_coef * (-np.tan(beta2) + np.tan(alpha1)) - work_coef
+    eq1 = 1 - flow_coef * (np.tan(beta2) - np.tan(alpha1)) - work_coef
     eq2 = (-work_coef / 2) - flow_coef * np.tan(alpha1) + 1 - R
     return [eq1, eq2]
 
@@ -34,65 +34,79 @@ def find_flow_angles_alpha1_beta2(work_coef, flow_coef, R):
         print('Alpha1 false')
     return alpha1, beta2
 
-def determine_velocity_triangles(flow_coef, U, alpha1, beta2, specific_work_stage):
+def determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2_original, specific_work_stage):
     # Define absolute beta2
-    beta2 = abs(beta2)
+    beta2 = abs(beta2_original)
     # Stays constant for all stages: Vm, U, beta2, alpha1, Vt
     V_m = U * flow_coef                 # Definition flow coefficient, stays constant over rotor blade
-    W_2 = V_m / np.cos(beta2)           # cos(beta2) = V_m/W_2
-    V_t2 = U - (V_m * np.tan(beta2))
-    alpha2 = np.arctan(V_t2 / V_m)      # tan(alpha2) = V_t2/V_m
-    V_2 = V_m / np.cos(alpha2)          # cos(alpha2) = V_m/V_2
+    # W_2 = V_m / np.cos(beta2)           # cos(beta2) = V_m/W_2
+    # V_t2 = U + (V_m * np.tan(beta2_original))
+    # alpha2_geo = np.arctan(V_t2 / V_m)      # tan(alpha2) = V_t2/V_m
+    # V_2 = V_m / np.cos(alpha2_geo)          # cos(alpha2) = V_m/V_2
+    #
+    # V_1 = V_m / np.cos(alpha1)          # cos(alpha1) = V_m/V_1
+    # V_t1 = V_m * np.tan(alpha1)         # tan(alpha1) = V_t1/V_m
+    # beta1_geo = np.arctan((U + V_t1)/V_m)
+    # W_1 = V_m / np.cos(beta1_geo)           # cos(beta1) = V_m/W_1
 
-    V_1 = V_m / np.cos(alpha1)          # cos(alpha1) = V_m/V_1
-    V_t1 = V_m * np.tan(alpha1)         # tan(alpha1) = V_t1/V_m
-    beta1 = np.arctan((U - V_t1)/V_m)
-    W_1 = V_m / np.cos(beta1)           # cos(beta1) = V_m/W_1
+    beta1 = np.arctan(np.tan(alpha1)-1/flow_coef)
+    alpha2 = np.arctan(np.tan(beta2)+1/flow_coef)
+
+    W_1 = V_m / np.cos(beta1)
+    V_t1 = V_m * np.tan(alpha1)
+    V_1 = V_m / np.cos(alpha1)
+
+    V_2 = V_m / np.cos(alpha2)
+    V_t2 = V_m * np.tan(alpha2)
+    W_2 = V_m / np.cos(beta2)
 
     delta_Vt = (V_t2 - V_t1)
 
+    # Change sign of alpha2
+    if alpha1 < beta1 and (V_1-W_2) <= 10e-5:
+        alpha2 = -1 * alpha2
+
     # checks
-    if (work_coef - (1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))) <= 10e-6:
+    if (work_coef - (1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))) <= 10e-5:
         print('Flow coef true')
     else:
         print("Flow coef false")
         print('Difference: ', (work_coef-(1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))))
 
-    if abs(specific_work_stage - (U * delta_Vt)) <= 10e-6:
+    if abs(specific_work_stage - (U * delta_Vt)) <= 10e-5:
         print('Specific work true')
     else:
         print('Specific work false')
         print("Difference: ", abs(specific_work_stage - (U * delta_Vt)))
-
-    if alpha2 > 0.:
-        print('Alpha2 true')
-    else:
-        print('Alpha2 false')
-
-    if beta1 > 0.:
-        print('Beta1 true')
-    else:
-        print('Beta1 false')
     return V_1, W_1, beta1, V_2, W_2, alpha2, V_m
 
 def plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U):
     angs = [alpha1, beta1, alpha2, beta2, np.pi/2, np.pi/2]
     velos = [V_1, W_1, V_2, W_2, U, U]
-    labels = ['V1', 'W1', 'V2', 'W2', 'U', 'U']
+    labels = ['V1', 'W1', 'V2', 'W2', 'U1', 'U2']
+    colours = ['red', 'blue', 'red', 'blue', 'green', 'green']
     for i in range(len(angs)):
         dx = velos[i] * np.sin(angs[i])
         dy = -1 * velos[i] * np.cos(angs[i])
         labelnow = labels[i]
+        colournow = colours[i]
+
+        # Make plotting factor -1 to have the right direction of U
+        if alpha1 < beta1:
+            plotting_factor = -1
+        else:
+            plotting_factor = 1
+
         if i < 4:
-            plt.plot([0,dx], [0, dy], label=labelnow)
+            plt.plot([0,dx], [0, dy], label=labelnow, color=colournow)
         elif i == 4:
             x0 = velos[1] * np.sin(angs[1])
             y0 = -1 * velos[1] * np.cos(angs[1])
-            plt.plot([x0, x0 + dx], [y0, y0 + dy], label=labelnow)
-        elif i == 4:
+            plt.plot([x0, x0 + plotting_factor*(dx)], [y0, y0 + dy], label=labelnow, color=colournow)
+        elif i == 5:
             x0 = velos[3] * np.sin(angs[3])
             y0 = -1 * velos[3] * np.cos(angs[3])
-            plt.plot([x0, x0 + dx], [y0, y0 + dy], label=labelnow)
+            plt.plot([x0, x0 + plotting_factor*(dx)], [y0, y0 + dy], label=labelnow, color=colournow)
     plt.legend()
     plt.show()
     return
@@ -159,7 +173,7 @@ def compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, mass_flow, R, work_coef, f
 
     # Determine flow angles & velocity triangles for each stage
     alpha1, beta2 = find_flow_angles_alpha1_beta2(work_coef, flow_coef, R)  # output in radians
-    V_1, W_1, beta1, V_2, W_2, alpha2, V_m = determine_velocity_triangles(flow_coef, U, alpha1, beta2, specific_work/nr_stages)
+    V_1, W_1, beta1, V_2, W_2, alpha2, V_m = determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2, specific_work/nr_stages)
     plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U)
 
     # Run through each stage and determine the thermodynamic properties
@@ -189,6 +203,17 @@ def compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, mass_flow, R, work_coef, f
         Tt_before = Tt_after
         Pt_before = Pt_after
 
+    fig,axs = plt.subplots(1, 2)
+    axs[0].plot(stagenr_array, pressure_array, label='Pressure')
+    axs[0].set_xticks([i for i in range(1,3,1)])
+    axs[0].set_xlabel('Stage nr')
+    axs[0].set_ylabel('Pressure')
+
+    axs[1].plot(stagenr_array, temp_array, label='Temperature')
+    axs[1].set_xticks([i for i in range(1,3,1)])
+    axs[1].set_xlabel('Stage nr')
+    axs[1].set_ylabel('Temperature')
+    plt.show()
 
     return
 
