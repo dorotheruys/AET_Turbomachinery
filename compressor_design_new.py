@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 from Testbedengineperformance import T_a, P_a, M
 
@@ -9,6 +8,7 @@ k_g = 1.33              #-
 cp_a = 1000             #J/kg K
 cp_g = 1150             #J/kg K
 m_air = 23.81           #kg/s
+total_PR = 5.5          #[-]
 
 def total_conditions(P_a, T_a, k, M):
     P_t = P_a*(1+(k-1)/2*M**2)**(k/(k-1))
@@ -28,42 +28,41 @@ def flow_angle_equations(vars, work_coef, flow_coef, R):
     return [eq1, eq2]
 
 def find_flow_angles_alpha1_beta2(work_coef, flow_coef, R):
-    initial_guess = np.array([1., -1.])  # Initial guess for alpha1 and beta2
-    solution = fsolve(flow_angle_equations, initial_guess, args=(work_coef, flow_coef, R))
+    # initial_guess = np.array([1., -1.])  # Initial guess for alpha1 and beta2
+    # solution = fsolve(flow_angle_equations, initial_guess, args=(work_coef, flow_coef, R))
+    #
+    # alpha1 = solution[0]
+    # beta2 = solution[1]
 
-    alpha1 = solution[0]
-    beta2 = solution[1]
+    tanalpha1 = -1/flow_coef * (R + work_coef/2 - 1)
+    alpha1 = np.arctan(tanalpha1)
+    tanbeta2 = 1/flow_coef * (work_coef - 1 + flow_coef * np.tan(alpha1))
+    beta2 = np.arctan(tanbeta2)
 
-    # checks
-    print('Checks')
-    if beta2 < 0.:
-        print('Beta2 true')
-    else:
-        print('Beta2 false')
-
-    if alpha1 > 0.:
-        print('Alpha1 true')
-    else:
-        print('Alpha1 false')
     return alpha1, beta2
 
-def determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2_original, specific_work_stage):
-    # Define absolute beta2
-    beta2 = abs(beta2_original)
+def determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2, specific_work):
+
     # Stays constant for all stages: Vm, U, beta2, alpha1, Vt
     V_m = U * flow_coef                 # Definition flow coefficient, stays constant over rotor blade
-    # W_2 = V_m / np.cos(beta2)           # cos(beta2) = V_m/W_2
-    # V_t2 = U + (V_m * np.tan(beta2_original))
-    # alpha2_geo = np.arctan(V_t2 / V_m)      # tan(alpha2) = V_t2/V_m
-    # V_2 = V_m / np.cos(alpha2_geo)          # cos(alpha2) = V_m/V_2
+
+    # W_2test = V_m / np.cos(beta2)           # cos(beta2) = V_m/W_2
+    # V_t2test = U + (V_m * np.tan(beta2))
+    # alpha2_geo = np.arctan(V_t2test / V_m)      # tan(alpha2) = V_t2/V_m
+    # V_2test = V_m / np.cos(alpha2_geo)          # cos(alpha2) = V_m/V_2
     #
-    # V_1 = V_m / np.cos(alpha1)          # cos(alpha1) = V_m/V_1
-    # V_t1 = V_m * np.tan(alpha1)         # tan(alpha1) = V_t1/V_m
-    # beta1_geo = np.arctan((U + V_t1)/V_m)
-    # W_1 = V_m / np.cos(beta1_geo)           # cos(beta1) = V_m/W_1
+    # V_1test = V_m / np.cos(alpha1)          # cos(alpha1) = V_m/V_1
+    # V_t1test = V_m * np.tan(alpha1)         # tan(alpha1) = V_t1/V_m
+    # beta1_geo = np.arctan((-U + V_t1test)/V_m)
+    # W_1test = V_m / np.cos(beta1_geo)           # cos(beta1) = V_m/W_1
 
     beta1 = np.arctan(np.tan(alpha1)-1/flow_coef)
     alpha2 = np.arctan(np.tan(beta2)+1/flow_coef)
+
+    # alpha1_deg = np.rad2deg(alpha1)
+    # alpha2_deg = np.rad2deg(alpha2)
+    # beta1_deg = np.rad2deg(beta1)
+    # beta2_deg = np.rad2deg(beta2)
 
     W_1 = V_m / np.cos(beta1)
     V_t1 = V_m * np.tan(alpha1)
@@ -86,18 +85,19 @@ def determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2_original
         print("Flow coef false")
         print('Difference: ', (work_coef-(1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))))
 
-    if abs(specific_work_stage - (U * delta_Vt)) <= 10e-5:
+    specific_work_diff = specific_work - (U * delta_Vt)
+    if abs(specific_work_diff) <= 10e-5:
         print('Specific work true')
     else:
         print('Specific work false')
-        print("Difference: ", abs(specific_work_stage - (U * delta_Vt)))
+        print("Difference: ", specific_work_diff)
     return V_1, W_1, beta1, V_2, W_2, alpha2, V_m
 
-def plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U):
+def plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U, pos):
     angs = [alpha1, beta1, alpha2, beta2, np.pi/2, np.pi/2]
     velos = [V_1, W_1, V_2, W_2, U, U]
     labels = ['V1', 'W1', 'V2', 'W2', 'U1', 'U2']
-    colours = ['red', 'blue', 'red', 'blue', 'green', 'green']
+    colours = ['red', 'blue', 'orange', 'darkblue', 'lightgreen', 'green']
     for i in range(len(angs)):
         dx = velos[i] * np.sin(angs[i])
         dy = -1 * velos[i] * np.cos(angs[i])
@@ -111,17 +111,18 @@ def plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U)
             plotting_factor = 1
 
         if i < 4:
-            plt.plot([0,dx], [0, dy], label=labelnow, color=colournow)
+            pos.plot([0,dx], [0, dy], label=labelnow, color=colournow)
         elif i == 4:
             x0 = velos[1] * np.sin(angs[1])
             y0 = -1 * velos[1] * np.cos(angs[1])
-            plt.plot([x0, x0 + plotting_factor*(dx)], [y0, y0 + dy], label=labelnow, color=colournow)
+            pos.plot([x0, x0 + plotting_factor*(dx)], [y0, y0 + dy], label=labelnow, color=colournow)
         elif i == 5:
             x0 = velos[3] * np.sin(angs[3])
             y0 = -1 * velos[3] * np.cos(angs[3])
-            plt.plot([x0, x0 + plotting_factor*(dx)], [y0, y0 + dy], label=labelnow, color=colournow)
-    plt.legend()
-    plt.show()
+            pos.plot([x0, x0 + plotting_factor*(dx)], [y0, y0 + dy], label=labelnow, color=colournow)
+
+    pos.legend()
+    pos.grid()
     return
 
 def calculate_number_of_stages(specific_work, work_coef, target_U):
@@ -144,12 +145,13 @@ def calculate_number_of_stages(specific_work, work_coef, target_U):
 
     return nr_stages, U
 
-def calculate_thermodynamic_properties_stage(C_p, eff, k, Tt_1, Pt_1, mass_flow, V_m, V_2, W_rotor1, W_rotor2):
+def calculate_thermodynamic_properties_stage(C_p, eff, k, Tt_1, Pt_1, mass_flow, V_m, V_2, W_rotor1, W_rotor2, specific_work_stage):
     # Definition of numbering: 1 before rotor, 2 between rotor and stator, 3 after stator
     # Use conservation of energy & relative enthalpy conserved over a rotor
 
     # after rotor
-    Tt_2 = (W_rotor2**2 + W_rotor1**2)/(2*C_p) + Tt_1
+    #Tt_2 = (W_rotor1**2 - W_rotor2**2)/(2*C_p) + Tt_1
+    Tt_2 = specific_work_stage/C_p + Tt_1
     Pt_2 = Pt_1 * ((Tt_2/Tt_1 - 1) * eff + 1)**(k/(k-1))
 
     T_2 = Tt_2 - V_2**2/(2*C_p)
@@ -169,14 +171,29 @@ def calculate_thermodynamic_properties_stage(C_p, eff, k, Tt_1, Pt_1, mass_flow,
     rho_3 = P_3/(R_constant * T_3)
     area_3 = mass_flow / (rho_3 * V_m)
 
-    return Tt_2, Pt_2, Tt_3, Pt_3, area_2, area_3
+    return Tt_2, Pt_2, P_2, Tt_3, Pt_3, P_3, area_2, area_3
 
 def calculate_blade_height(area, r_in):
     blade_height = np.sqrt(area / np.pi + r_in**2) - r_in
     return blade_height
 
-def compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, mass_flow, R, work_coef, flow_coef, r_in):
+def plot_meridional_gaspath(stage_array, bladeheight_array, inner_radius, blade_chord):
+    spacing = 0.005
+    for i in stage_array[1:]:
+        i = int(i)
+        start_x = (i - 1) * blade_chord + (i - 1) * spacing
+        start_y = inner_radius + bladeheight_array[i]
+        vertices_x = [start_x, start_x + blade_chord, start_x + blade_chord, start_x, start_x]
+        vertices_y = [start_y, start_y,-1 * start_y, -1 * start_y, start_y]
+
+        plt.plot(vertices_x, vertices_y, '--bo')
+    plt.show()
+    return
+
+def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_in):
     # Determine total outlet conditions T0_out and P0_out
+    Pt_in, Tt_in = total_conditions(P_a, T_a, k_a, M)
+    Pt_out, Tt_out, W_comp = station_3(Pt_in, Tt_in, k_a, cp_a, m_air, eta_comp, total_PR)
 
     #specific work
     specific_work = cp_a * (Tt_out - Tt_in)
@@ -187,64 +204,105 @@ def compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, mass_flow, R, work_coef, f
     # Determine flow angles & velocity triangles for each stage
     alpha1, beta2 = find_flow_angles_alpha1_beta2(work_coef, flow_coef, R)  # output in radians
     V_1, W_1, beta1, V_2, W_2, alpha2, V_m = determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2, specific_work/nr_stages)
-    plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U)
 
     # Run through each stage and determine the thermodynamic properties
     Tt_before = Tt_in
     Pt_before = Pt_in
 
     temp_array = np.zeros(2*nr_stages)
-    pressure_array = np.zeros(2*nr_stages)
+    total_pressure_array = np.zeros(2*nr_stages)
+    static_pressure_array = np.zeros(2*nr_stages)
+    PR_array = np.zeros(2*nr_stages)
     stagenr_array = np.zeros(2*nr_stages)
     bladeheight_array = np.zeros(2*nr_stages)
 
+    # stagenr_array[0] = 0
+    # temp_array[0] = Tt_in/Tt_in
+    # total_pressure_array[0] = Pt_in/Pt_in
+    # bladeheight_array[0] = 0
+
     for stagenr in range(1, nr_stages+1):
-        Tt_during, Pt_during, Tt_after, Pt_after, area_rotor, area_stator = calculate_thermodynamic_properties_stage(cp_a, eta_comp, k_a, Tt_before, Pt_before, mass_flow, V_m, V_2, W_1, W_2)
+        Tt_during, Pt_during, P_during, Tt_after, Pt_after, P_after, area_rotor, area_stator = calculate_thermodynamic_properties_stage(cp_a, eta_comp, k_a, Tt_before, Pt_before, mass_flow, V_m, V_2, W_1, W_2, specific_work/nr_stages)
 
         bladeheight_rotor = calculate_blade_height(area_rotor, r_in)
         bladeheight_stator = calculate_blade_height(area_stator, r_in)
 
         stagenr_array[2*(stagenr-1)] = stagenr
         stagenr_array[2*(stagenr-1)+1] = stagenr
-        temp_array[2*(stagenr-1)] = Tt_during
-        temp_array[2*(stagenr-1)+1] = Tt_after
-        pressure_array[2*(stagenr-1)] = Pt_during
-        pressure_array[2*(stagenr-1)+1] = Pt_after
+        temp_array[2*(stagenr-1)] = Tt_during/Tt_in
+        temp_array[2*(stagenr-1)+1] = Tt_after/Tt_in
+        total_pressure_array[2*(stagenr-1)] = Pt_during/Pt_in
+        total_pressure_array[2*(stagenr-1)+1] = Pt_after/Pt_in
+        static_pressure_array[2*(stagenr-1)] = P_during/Pt_in
+        static_pressure_array[2*(stagenr-1)+1] = P_after/Pt_in
+        PR_array[2*(stagenr-1)] = Pt_after/Pt_before
+        PR_array[2*(stagenr-1)+1] = Pt_after/Pt_before
         bladeheight_array[2*(stagenr-1)] = bladeheight_rotor
         bladeheight_array[2*(stagenr-1)+1] = bladeheight_stator
 
         Tt_before = Tt_after
         Pt_before = Pt_after
 
-    fig,axs = plt.subplots(1, 2)
-    axs[0].plot(stagenr_array, pressure_array, label='Pressure')
-    axs[0].set_xticks([i for i in range(1,3,1)])
-    axs[0].set_xlabel('Stage nr')
-    axs[0].set_ylabel('Pressure')
+    print('Number of stages: ', nr_stages)
+    print('Blade Heights: ', bladeheight_array)
+    print('Pt/Pt0: ', total_pressure_array)
+    print('Tt/Tt0: ', temp_array)
 
-    axs[1].plot(stagenr_array, temp_array, label='Temperature')
-    axs[1].set_xticks([i for i in range(1,3,1)])
-    axs[1].set_xlabel('Stage nr')
-    axs[1].set_ylabel('Temperature')
+    fig,axs = plt.subplots(2, 3)
+    axs[0, 0].plot(stagenr_array, total_pressure_array)
+    axs[0, 0].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
+    axs[0, 0].set_yticks([i for i in np.arange(min(total_pressure_array), max(total_pressure_array)+0.5, 0.5)])
+    axs[0, 0].grid()
+    axs[0, 0].set_xlabel('Stage Number')
+    axs[0, 0].set_ylabel('Pt/Pt0 [-]')
+
+    axs[0, 1].plot(stagenr_array, static_pressure_array)
+    axs[0, 1].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
+    axs[0, 1].set_yticks([i for i in np.arange(min(static_pressure_array), max(static_pressure_array), 0.5)])
+    axs[0, 1].grid()
+    axs[0, 1].set_xlabel('Stage Number')
+    axs[0, 1].set_ylabel('P/Pt0 [-]')
+
+    axs[0, 2].plot(stagenr_array, temp_array)
+    axs[0, 2].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
+    axs[0, 2].set_yticks([i for i in np.arange(min(temp_array), max(temp_array), 0.05)])
+    axs[0, 2].grid()
+    axs[0, 2].set_xlabel('Stage Number')
+    axs[0, 2].set_ylabel('Tt/Tt0 [-]')
+
+    axs[1, 0].plot(stagenr_array, PR_array)
+    axs[1, 0].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
+    axs[1, 0].set_yticks([i for i in np.arange(min(PR_array), max(PR_array), 0.025)])
+    axs[1, 0].grid()
+    axs[1, 0].set_xlabel('Stage Number')
+    axs[1, 0].set_ylabel('Pressure Ratio [-]')
+
+    plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U, axs[1, 1])
+
+    axs[1, 2].plot(stagenr_array, bladeheight_array, label='Blade Height')
+    axs[1, 2].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
+    axs[1, 2].set_yticks([i for i in np.arange(min(bladeheight_array), max(bladeheight_array), 0.01)])
+    axs[1, 2].grid()
+    axs[1, 2].set_xlabel('Stage Number')
+    axs[1, 2].set_ylabel('Blade Height [m]')
+
     plt.show()
 
-    return
+    return stagenr_array, bladeheight_array
 
 
 # # Example usage:
 work_coef = 0.38
 flow_coef = 0.77
 eta_comp = 0.91
+blade_chord = 0.04      #[m]
 
-# work_coef = 2.
-# flow_coef = 1.
+# work_coef = 0.1
+# flow_coef = 0.2
+# eta_comp = 1.
 
 R = 0.5
-r_in = 0.5
+r_in = 0.05
 
-Pt_in, Tt_in = total_conditions(P_a, T_a, k_a, M)
-Pt_out, Tt_out, W_comp = station_3(Pt_in, Tt_in ,k_a ,cp_a, m_air, eta_comp)
-
-print('------------------------------------------')
-
-compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, m_air, R, work_coef, flow_coef, r_in)
+stagenr_array, bladeheight_array = compressor_design(eta_comp, total_PR, m_air, R, work_coef, flow_coef, r_in)
+plot_meridional_gaspath(stagenr_array, bladeheight_array, r_in, blade_chord)
