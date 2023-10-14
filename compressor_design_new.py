@@ -1,13 +1,26 @@
 import numpy as np
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
-from Flightengineperformance import total_conditions, station_3, T_a, P_a, M, m_air
+from Testbedengineperformance import T_a, P_a, M
 
 R_constant = 287        #J/K*mol
 k_a = 1.4               #-
 k_g = 1.33              #-
 cp_a = 1000             #J/kg K
 cp_g = 1150             #J/kg K
+m_air = 23.81           #kg/s
+
+def total_conditions(P_a, T_a, k, M):
+    P_t = P_a*(1+(k-1)/2*M**2)**(k/(k-1))
+    T_t = T_a * (1 + (k - 1) / 2 * M ** 2)
+    return P_t, T_t
+def station_3(P_t,T_t,k,cp_a,m_air,efficiency_comp, total_PR):
+    P_t2 = P_t
+    T_t2 = T_t
+    P_t3 = P_t2*total_PR
+    T_t3 = T_t2*(1+1/efficiency_comp*((P_t3/P_t2)**((k-1)/k)-1))
+    W_comp = cp_a*m_air*(T_t3-T_t2)
+    return P_t3,T_t3,W_comp
 def flow_angle_equations(vars, work_coef, flow_coef, R):
     alpha1, beta2 = vars
     eq1 = 1 - flow_coef * (np.tan(beta2) - np.tan(alpha1)) - work_coef
@@ -221,12 +234,12 @@ def compressor_design(eta_comp, Pt_in, Tt_in, Tt_out, mass_flow, R, work_coef, f
 # # Example usage:
 work_coef = 0.38
 flow_coef = 0.77
+eta_comp = 0.91
 
 # work_coef = 2.
 # flow_coef = 1.
 
 R = 0.5
-eta_comp = 1.
 r_in = 0.5
 
 Pt_in, Tt_in = total_conditions(P_a, T_a, k_a, M)
