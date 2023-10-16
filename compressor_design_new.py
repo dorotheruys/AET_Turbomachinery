@@ -59,10 +59,10 @@ def determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2, specifi
     beta1 = np.arctan(np.tan(alpha1)-1/flow_coef)
     alpha2 = np.arctan(np.tan(beta2)+1/flow_coef)
 
-    # alpha1_deg = np.rad2deg(alpha1)
-    # alpha2_deg = np.rad2deg(alpha2)
-    # beta1_deg = np.rad2deg(beta1)
-    # beta2_deg = np.rad2deg(beta2)
+    alpha1_deg = np.rad2deg(alpha1)
+    alpha2_deg = np.rad2deg(alpha2)
+    beta1_deg = np.rad2deg(beta1)
+    beta2_deg = np.rad2deg(beta2)
 
     W_1 = V_m / np.cos(beta1)
     V_t1 = V_m * np.tan(alpha1)
@@ -74,9 +74,9 @@ def determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2, specifi
 
     delta_Vt = (V_t2 - V_t1)
 
-    # Change sign of alpha2
-    if alpha1 < beta1 and (V_1-W_2) <= 10e-5:
-        alpha2 = -1 * alpha2
+    # # Change sign of alpha2
+    # if alpha1 < beta1 and (V_1-W_2) <= 10e-5:
+    #     alpha2 = -1 * alpha2
 
     # checks
     if (work_coef - (1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))) <= 10e-5:
