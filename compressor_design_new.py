@@ -171,7 +171,11 @@ def calculate_thermodynamic_properties_stage(C_p, eff, k, Tt_1, Pt_1, mass_flow,
     rho_3 = P_3/(R_constant * T_3)
     area_3 = mass_flow / (rho_3 * V_m)
 
-    return Tt_2, Pt_2, P_2, Tt_3, Pt_3, P_3, area_2, area_3
+    # entropy, enthalpy
+    delta_S = cp_a * np.log(Tt_3 / Tt_1) - R_constant * np.log(Pt_3 / Pt_1)
+    delta_h = cp_a * (Tt_3 - Tt_1)
+
+    return Tt_2, Pt_2, P_2, Tt_3, Pt_3, P_3, area_2, area_3, delta_S, delta_h
 
 def calculate_blade_height(area, r_in):
     blade_height = np.sqrt(area / np.pi + r_in**2) - r_in
@@ -179,10 +183,11 @@ def calculate_blade_height(area, r_in):
 
 def plot_meridional_gaspath(stage_array, bladeheight_array, inner_radius, blade_chord):
     spacing = 0.005
-    for i in stage_array[1:]:
+    last_stage = stage_array[-1]
+    for i in np.arange(1, last_stage + 1, 1):
         i = int(i)
         start_x = (i - 1) * blade_chord + (i - 1) * spacing
-        start_y = inner_radius + bladeheight_array[i]
+        start_y = inner_radius + bladeheight_array[2*i-1]
         vertices_x = [start_x, start_x + blade_chord, start_x + blade_chord, start_x, start_x]
         vertices_y = [start_y, start_y,-1 * start_y, -1 * start_y, start_y]
 
@@ -190,6 +195,12 @@ def plot_meridional_gaspath(stage_array, bladeheight_array, inner_radius, blade_
     plt.show()
     return
 
+def plot_h_s_diagram(entropy, enthalpy, pos):
+    pos.plot(entropy, enthalpy)
+    pos.xlabel(r"$\Delta$ Entropy [J/kg]")
+    pos.ylabel(r"$\Delta$ Enthalpy [J]")
+    pos.grid()
+    return
 def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_in):
     # Determine total outlet conditions T0_out and P0_out
     Pt_in, Tt_in = total_conditions(P_a, T_a, k_a, M)
@@ -208,37 +219,49 @@ def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_
     # Run through each stage and determine the thermodynamic properties
     Tt_before = Tt_in
     Pt_before = Pt_in
+    entropy = 0.
+    enthalpy = 0.
 
-    temp_array = np.zeros(2*nr_stages)
-    total_pressure_array = np.zeros(2*nr_stages)
-    static_pressure_array = np.zeros(2*nr_stages)
-    PR_array = np.zeros(2*nr_stages)
-    stagenr_array = np.zeros(2*nr_stages)
-    bladeheight_array = np.zeros(2*nr_stages)
+    temp_array = np.zeros(2*nr_stages+1)
+    total_pressure_array = np.zeros(2*nr_stages+1)
+    static_pressure_array = np.zeros(2*nr_stages+1)
+    PR_array = np.zeros(2*nr_stages+1)
+    stagenr_array = np.zeros(2*nr_stages+1)
+    bladeheight_array = np.zeros(2*nr_stages+1)
+    entropy_array = np.zeros(nr_stages+1)
+    enthalpy_array = np.zeros(nr_stages+1)
 
-    # stagenr_array[0] = 0
-    # temp_array[0] = Tt_in/Tt_in
-    # total_pressure_array[0] = Pt_in/Pt_in
-    # bladeheight_array[0] = 0
+    stagenr_array[0] = 0
+    temp_array[0] = Tt_in/Tt_in
+    total_pressure_array[0] = Pt_in/Pt_in
+    bladeheight_array[0] = 0
+    enthalpy_array[0] = enthalpy
+    entropy_array[0] = entropy
 
     for stagenr in range(1, nr_stages+1):
-        Tt_during, Pt_during, P_during, Tt_after, Pt_after, P_after, area_rotor, area_stator = calculate_thermodynamic_properties_stage(cp_a, eta_comp, k_a, Tt_before, Pt_before, mass_flow, V_m, V_2, W_1, W_2, specific_work/nr_stages)
+        Tt_during, Pt_during, P_during, Tt_after, Pt_after, P_after, area_rotor, area_stator, delta_S, delta_h = calculate_thermodynamic_properties_stage(cp_a, eta_comp, k_a, Tt_before, Pt_before, mass_flow, V_m, V_2, W_1, W_2, specific_work/nr_stages)
+
+        entropy += delta_S
+        enthalpy += delta_h
 
         bladeheight_rotor = calculate_blade_height(area_rotor, r_in)
         bladeheight_stator = calculate_blade_height(area_stator, r_in)
 
-        stagenr_array[2*(stagenr-1)] = stagenr
-        stagenr_array[2*(stagenr-1)+1] = stagenr
-        temp_array[2*(stagenr-1)] = Tt_during/Tt_in
-        temp_array[2*(stagenr-1)+1] = Tt_after/Tt_in
-        total_pressure_array[2*(stagenr-1)] = Pt_during/Pt_in
-        total_pressure_array[2*(stagenr-1)+1] = Pt_after/Pt_in
-        static_pressure_array[2*(stagenr-1)] = P_during/Pt_in
-        static_pressure_array[2*(stagenr-1)+1] = P_after/Pt_in
-        PR_array[2*(stagenr-1)] = Pt_after/Pt_before
+        stagenr_array[2*(stagenr-1)+1] = stagenr - 0.5
+        stagenr_array[2*(stagenr-1)+1+1] = stagenr
+        temp_array[2*(stagenr-1)+1] = Tt_during/Tt_in
+        temp_array[2*(stagenr-1)+1+1] = Tt_after/Tt_in
+        total_pressure_array[2*(stagenr-1)+1] = Pt_during/Pt_in
+        total_pressure_array[2*(stagenr-1)+1+1] = Pt_after/Pt_in
+        static_pressure_array[2*(stagenr-1)+1] = P_during/Pt_in
+        static_pressure_array[2*(stagenr-1)+1+1] = P_after/Pt_in
         PR_array[2*(stagenr-1)+1] = Pt_after/Pt_before
-        bladeheight_array[2*(stagenr-1)] = bladeheight_rotor
-        bladeheight_array[2*(stagenr-1)+1] = bladeheight_stator
+        PR_array[2*(stagenr-1)+1+1] = Pt_after/Pt_before
+        bladeheight_array[2*(stagenr-1)+1] = bladeheight_rotor
+        bladeheight_array[2*(stagenr-1)+1+1] = bladeheight_stator
+
+        entropy_array[stagenr] = entropy
+        enthalpy_array[stagenr] = enthalpy
 
         Tt_before = Tt_after
         Pt_before = Pt_after
@@ -248,45 +271,56 @@ def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_
     print('Pt/Pt0: ', total_pressure_array)
     print('Tt/Tt0: ', temp_array)
 
-    fig,axs = plt.subplots(2, 3)
+    fig,axs = plt.subplots(2, 2)
     axs[0, 0].plot(stagenr_array, total_pressure_array)
-    axs[0, 0].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
+    axs[0, 0].set_xticks([i for i in np.arange(0,int(len(stagenr_array)/2),0.5)])
     axs[0, 0].set_yticks([i for i in np.arange(min(total_pressure_array), max(total_pressure_array)+0.5, 0.5)])
     axs[0, 0].grid()
     axs[0, 0].set_xlabel('Stage Number')
-    axs[0, 0].set_ylabel('Pt/Pt0 [-]')
+    axs[0, 0].set_ylabel(r'$P_{t}/P_{t0}$ [-]')
 
     axs[0, 1].plot(stagenr_array, static_pressure_array)
-    axs[0, 1].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
-    axs[0, 1].set_yticks([i for i in np.arange(min(static_pressure_array), max(static_pressure_array), 0.5)])
+    axs[0, 1].set_xticks([i for i in np.arange(0,int(len(stagenr_array)/2 ),0.5)])
+    axs[0, 1].set_yticks([i for i in np.arange(min(static_pressure_array), max(static_pressure_array), 0.25)])
     axs[0, 1].grid()
     axs[0, 1].set_xlabel('Stage Number')
-    axs[0, 1].set_ylabel('P/Pt0 [-]')
+    axs[0, 1].set_ylabel(r'$P/P_{t0}$ [-]')
 
-    axs[0, 2].plot(stagenr_array, temp_array)
-    axs[0, 2].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
-    axs[0, 2].set_yticks([i for i in np.arange(min(temp_array), max(temp_array), 0.05)])
-    axs[0, 2].grid()
-    axs[0, 2].set_xlabel('Stage Number')
-    axs[0, 2].set_ylabel('Tt/Tt0 [-]')
-
-    axs[1, 0].plot(stagenr_array, PR_array)
-    axs[1, 0].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
-    axs[1, 0].set_yticks([i for i in np.arange(min(PR_array), max(PR_array), 0.025)])
+    axs[1, 0].plot(stagenr_array, temp_array)
+    axs[1, 0].set_xticks([i for i in np.arange(0,int(len(stagenr_array)/2),0.5)])
+    axs[1, 0].set_yticks([i for i in np.arange(min(temp_array), max(temp_array), 0.1)])
     axs[1, 0].grid()
     axs[1, 0].set_xlabel('Stage Number')
-    axs[1, 0].set_ylabel('Pressure Ratio [-]')
+    axs[1, 0].set_ylabel(r'$T_{t}/T_{t0}$ [-]')
 
-    plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U, axs[1, 1])
+    axs[1, 1].plot([stagenr_array[2], stagenr_array[4]], [PR_array[2], PR_array[4]])
+    axs[1, 1].set_xticks([i for i in np.arange(1,2.5, 0.5)])
+    axs[1, 1].set_yticks([i for i in np.arange(2, 2.6, 0.1)])
+    axs[1, 1].grid()
+    axs[1, 1].set_xlabel('Stage Number')
+    axs[1, 1].set_ylabel(r'$\beta_{stage}$ [-]')
 
-    axs[1, 2].plot(stagenr_array, bladeheight_array, label='Blade Height')
-    axs[1, 2].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
-    axs[1, 2].set_yticks([i for i in np.arange(min(bladeheight_array), max(bladeheight_array), 0.01)])
-    axs[1, 2].grid()
-    axs[1, 2].set_xlabel('Stage Number')
-    axs[1, 2].set_ylabel('Blade Height [m]')
+    fig.set_size_inches(9.5, 6.5)
+    fig.savefig("thermodynamic-properties-stage.svg", format="svg", bbox_inches='tight')
+    #plt.show()
 
+    fig2 = plt.figure(2)
+    plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U, plt)
+    fig2.savefig("velocity-triangles.svg", format="svg", bbox_inches='tight')
+    #plt.show()
+
+    fig3 = plt.figure(3)
+    plot_h_s_diagram(entropy_array, enthalpy_array, plt)
+    fig3.savefig("h-s-diagram.svg", format="svg", bbox_inches='tight')
     plt.show()
+
+
+    # axs[1, 2].plot(stagenr_array, bladeheight_array, label='Blade Height')
+    # axs[1, 2].set_xticks([i for i in range(1,int(len(stagenr_array)/2 + 1),1)])
+    # axs[1, 2].set_yticks([i for i in np.arange(min(bladeheight_array), max(bladeheight_array), 0.01)])
+    # axs[1, 2].grid()
+    # axs[1, 2].set_xlabel('Stage Number')
+    # axs[1, 2].set_ylabel('Blade Height [m]')
 
     return stagenr_array, bladeheight_array
 
@@ -295,7 +329,6 @@ def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_
 work_coef = 0.38
 flow_coef = 0.77
 eta_comp = 0.91
-blade_chord = 0.04      #[m]
 
 # work_coef = 0.1
 # flow_coef = 0.2
@@ -303,6 +336,8 @@ blade_chord = 0.04      #[m]
 
 R = 0.5
 r_in = 0.05
+blade_chord = 0.04      #[m]
 
 stagenr_array, bladeheight_array = compressor_design(eta_comp, total_PR, m_air, R, work_coef, flow_coef, r_in)
 plot_meridional_gaspath(stagenr_array, bladeheight_array, r_in, blade_chord)
+plt.show()
