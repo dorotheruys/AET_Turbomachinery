@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from Testbedengineperformance import T_a, P_a, M
+from Flightengineperformance import T_a, P_a, M
 
 R_constant = 287        #J/K*mol
 k_a = 1.4               #-
@@ -59,10 +59,12 @@ def determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2, specifi
     beta1 = np.arctan(np.tan(alpha1)-1/flow_coef)
     alpha2 = np.arctan(np.tan(beta2)+1/flow_coef)
 
-    alpha1_deg = np.rad2deg(alpha1)
-    alpha2_deg = np.rad2deg(alpha2)
-    beta1_deg = np.rad2deg(beta1)
-    beta2_deg = np.rad2deg(beta2)
+    print(f"For \u03C8 = {work_coef},\u03C6 = {flow_coef} and R = {R}: ")
+    print("Alpha 1 = ", np.rad2deg(alpha1))
+    print("Alpha 2 = ", np.rad2deg(alpha2))
+    print("Beta 1 = ", np.rad2deg(beta1))
+    print("Beta 2 = ", np.rad2deg(beta2))
+    print("U = ", U)
 
     W_1 = V_m / np.cos(beta1)
     V_t1 = V_m * np.tan(alpha1)
@@ -74,23 +76,19 @@ def determine_velocity_triangles(flow_coef, work_coef, U, alpha1, beta2, specifi
 
     delta_Vt = (V_t2 - V_t1)
 
-    # # Change sign of alpha2
-    # if alpha1 < beta1 and (V_1-W_2) <= 10e-5:
-    #     alpha2 = -1 * alpha2
-
     # checks
-    if (work_coef - (1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))) <= 10e-5:
-        print('Flow coef true')
-    else:
-        print("Flow coef false")
-        print('Difference: ', (work_coef-(1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))))
-
-    specific_work_diff = specific_work - (U * delta_Vt)
-    if abs(specific_work_diff) <= 10e-5:
-        print('Specific work true')
-    else:
-        print('Specific work false')
-        print("Difference: ", specific_work_diff)
+    # if (work_coef - (1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))) <= 10e-5:
+    #     print('Flow coef true')
+    # else:
+    #     print("Flow coef false")
+    #     print('Difference: ', (work_coef-(1-flow_coef*np.tan(alpha1)+flow_coef*np.tan(beta2))))
+    #
+    # specific_work_diff = specific_work - (U * delta_Vt)
+    # if abs(specific_work_diff) <= 10e-5:
+    #     print('Specific work true')
+    # else:
+    #     print('Specific work false')
+    #     print("Difference: ", specific_work_diff)
     return V_1, W_1, beta1, V_2, W_2, alpha2, V_m
 
 def plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U, pos):
@@ -247,6 +245,11 @@ def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_
         bladeheight_rotor = calculate_blade_height(area_rotor, r_in)
         bladeheight_stator = calculate_blade_height(area_stator, r_in)
 
+        print(f"Condtions at stage {stagenr}: ")
+        print(f"Total temperature after rotor [K] = {Tt_during}")
+        print(f"Total pressure after rotor [Pa] = {Pt_during}")
+
+
         stagenr_array[2*(stagenr-1)+1] = stagenr - 0.5
         stagenr_array[2*(stagenr-1)+1+1] = stagenr
         temp_array[2*(stagenr-1)+1] = Tt_during/Tt_in
@@ -301,17 +304,17 @@ def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_
     axs[1, 1].set_ylabel(r'$\beta_{stage}$ [-]')
 
     fig.set_size_inches(9.5, 6.5)
-    fig.savefig("thermodynamic-properties-stage.svg", format="svg", bbox_inches='tight')
+    fig.savefig("thermodynamic-properties-stage-flight.svg", format="svg", bbox_inches='tight')
     #plt.show()
 
     fig2 = plt.figure(2)
     plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U, plt)
-    fig2.savefig("velocity-triangles.svg", format="svg", bbox_inches='tight')
+    fig2.savefig("velocity-triangles-flight.svg", format="svg", bbox_inches='tight')
     #plt.show()
 
     fig3 = plt.figure(3)
     plot_h_s_diagram(entropy_array, enthalpy_array, plt)
-    fig3.savefig("h-s-diagram.svg", format="svg", bbox_inches='tight')
+    fig3.savefig("h-s-diagram-flight.svg", format="svg", bbox_inches='tight')
     plt.show()
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-print("Testbed performance ---------------------------------------------------------")
+print("Conditions: Testbed performance")
 #Datasheet
 F_G = 15167 #N
 m_air = 23.81 #kg/s
