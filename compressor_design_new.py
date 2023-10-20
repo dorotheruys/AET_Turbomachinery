@@ -8,7 +8,16 @@ k_g = 1.33              #-
 cp_a = 1000             #J/kg K
 cp_g = 1150             #J/kg K
 m_air = 23.81           #kg/s
-total_PR = 5.5          #[-]
+#total_PR = 5.5          #[-]
+
+if T_a == 288:
+    total_PR = 5.5
+elif T_a == (288.15-0.0065*35000*0.3048):
+    total_PR = 6.5
+else:
+    print("Error in start data")
+    quit()
+
 
 def total_conditions(P_a, T_a, k, M):
     P_t = P_a*(1+(k-1)/2*M**2)**(k/(k-1))
