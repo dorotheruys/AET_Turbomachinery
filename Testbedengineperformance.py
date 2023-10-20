@@ -19,7 +19,7 @@ LHV = 43*10**6 #Lower heating value
 #Estimated values (These can be played with to ensure that the gross thrust is 15167 N at sea level)
 eta_comp = 0.8065#0.8059 #Efficiency of assignment 1 for both compressors 0.9^2
 eta_turb = eta_comp*0.957 #Efficiency of assignment 1 for both turbines   0.877^2
-A_inlet = 0.624**2*np.pi #Inlet area calculater with the diameter of the viper engine
+A_inlet = (0.624/2)**2*np.pi #Inlet area calculater with the diameter of the viper engine
 
 #Initial calculations
 rho = P_a/(T_a*R) #kg/m^3
