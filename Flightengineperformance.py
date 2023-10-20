@@ -79,7 +79,15 @@ def area_ratio(P_t7,P_t4,k_g):
     A_t_to_A_n = (P_t7/P_t4)**((k_g+1)/(2*k_g))
     return A_t_to_A_n
 
+
 A_t_to_A_n = area_ratio(P_t7,P_t4,k_g)
 
+def pressure_ratio(area_ratio,k):
+    pressureratio = area_ratio**((2*k)/(k+1))
+    return pressureratio
+
+Pt_07_to_Pt_04 = pressure_ratio(A_t_to_A_n,k_g)
+
 print("The turbine to propulsive nozzle area ratio is:", A_t_to_A_n)
+print("The turbine to propulsive nozzle pressure ratio is:", Pt_07_to_Pt_04)
 print("The nozzle is ",nozzle_status)
