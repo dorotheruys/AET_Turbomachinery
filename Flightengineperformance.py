@@ -1,62 +1,75 @@
 import numpy as np
-from Testbedengineperformance import A_inlet,eta_comp,eta_turb
-
-print("Conditions: Flight performance")
+from Testbedengineperformance import T_a,T_t4,R,k_a,cp_a,k_g,cp_g,LHV,total_comp,eta_comp,eta_turb,m_air
 
 #Datasheet
-total_comp = 5.5 #-
-R = 287 #J/K*mol
-k_a = 1.4 #-
-k_g = 1.33 #-
-cp_a = 1000 #J/kg K
-cp_g = 1150 #J/kg K
-eta_noz = 1
-LHV = 43*10**6 #Lower heating value
-M = 0.78 #-
-h = 35000 #ft
-TIT = 1150 #K
-
-#Initial calculations
-T_a = 288.15-0.0065*35000*0.3048   #Ambient temperature at flight altitude
-P_a = 101325*(T_a/288.15)**(9.80665/(0.0065*R))
-rho = P_a/(T_a*R) #kg/m^3
-a = np.sqrt(k_a*R*T_a)
-v_flight = M*a
-m_air = A_inlet*rho*v_flight
+M = 0.78
+TIT_cruise = 1150
+T_a_cruise = 288.15-0.0065*35000*0.3048   #Ambient temperature at flight altitude
+P_a_cruise = 101325*(T_a_cruise/288.15)**(9.80665/(0.0065*R)) #Ambient pressure at flight condition
+T_t2 = T_a  #Total temperature in station 2 of testbed
 
 def total_conditions(P_a,T_a,k,M):
     P_t = P_a*(1+(k-1)/2*M**2)**(k/(k-1))
     T_t = T_a * (1 + (k - 1) / 2 * M ** 2)
-    return P_t, T_t
-
-P_t, T_t = total_conditions(P_a,T_a,k_a,M)
-
-def station_3(P_t,T_t,k,cp_a,m_air,eta_comp):
+    #Inlet efficiency is 1
     P_t2 = P_t
     T_t2 = T_t
+    return P_t2, T_t2
+
+P_t2_cruise, T_t2_cruise = total_conditions(P_a_cruise,T_a_cruise,k_a,M)
+
+#Function to calculate compressor ratio during cruise. Equations taken from aircraft propulsion book om page 787
+def compressor_ratio(T_t2,T_t4,total_comp,eta_comp,k,T_t2_cruise,TIT_cruise):
+    tau_ratio_testbed = T_t2/T_t4
+    tau_comp_testbed = total_comp**((k-1)/(eta_comp*k))
+    tau_ratio_cruise = T_t2_cruise/TIT_cruise
+    tau_cruise = 1 + tau_ratio_testbed/tau_ratio_cruise*(tau_comp_testbed-1)
+    total_comp_cruise = tau_cruise**(eta_comp*k/(k-1))
+    return total_comp_cruise
+
+total_comp_cruise = compressor_ratio(T_t2,T_t4,total_comp,eta_comp,k_a,T_t2_cruise,TIT_cruise)
+print(total_comp_cruise)
+
+#Function to calculate corrected massflow and with the actual massflow. Again from page 787 onwards
+def massflows(m_air,total_comp_cruise,total_comp,T_t4,T_t2,TIT_cruise,T_t2_cruise, P_t2_cruise):
+    m_corrected = m_air*((total_comp_cruise/total_comp)*(np.sqrt(T_t4/T_t2)/np.sqrt(TIT_cruise/T_t2_cruise)))
+    delta = P_t2_cruise / 101330
+    theta = T_t2_cruise / 288.2
+    mflow = m_corrected * delta / np.sqrt(theta)
+    return m_corrected, mflow
+
+m_corrected, m_air_cruise = massflows(m_air,total_comp_cruise,total_comp,T_t4,T_t2,TIT_cruise,T_t2_cruise, P_t2_cruise)
+print(m_corrected,m_air_cruise)
+#Total conditions in station 3
+def station_3(P_t2,T_t2,k,cp_a,m_air,total_comp,eta_comp):
     P_t3 = P_t2*total_comp
     T_t3 = T_t2*(1+1/eta_comp*((P_t3/P_t2)**((k-1)/k)-1))
     W_comp = cp_a*m_air*(T_t3-T_t2)
     return P_t3,T_t3,W_comp
 
-P_t3, T_t3, W_comp =station_3(P_t,T_t,k_a,cp_a,m_air,eta_comp)
+P_t3_cruise, T_t3_cruise, W_comp_cruise = station_3(P_t2_cruise,T_t2_cruise,k_a,cp_a,m_air_cruise,total_comp_cruise,eta_comp)
 
+#Total conditions in station 4
 def station_4(m_air,LHV,cp_g,T_t3,P_t3,TIT):
     P_t4 = P_t3
     m_fuel = m_air*cp_g*(TIT-T_t3)/(LHV)
     return P_t4,m_fuel
 
-P_t4,m_fuel = station_4(m_air,LHV,cp_g,T_t3,P_t3,TIT)
+P_t4_cruise,m_fuel_cruise = station_4(m_air_cruise,LHV,cp_g,T_t3_cruise,P_t3_cruise,TIT_cruise)
 
-def station_5(m_air,m_fuel,cp_g,TIT,W_comp,eta_turb,P_t4):
-    T_t5 = TIT - W_comp/((m_air+m_fuel)*cp_g)
-    P_t5 = ((((T_t5 / TIT - 1) / -eta_turb) - 1) * -1) ** (k_g / (k_g - 1)) * P_t4
-    return P_t5, T_t5
+#Total conditions in station 5
+def station_5(m_air,m_fuel,cp_g,T_t4,W_comp,eta_turb,P_t4):
+    T_t5 = T_t4 - W_comp/((m_air+m_fuel)*cp_g)
+    P_t5 = ((((T_t5 / T_t4 - 1) / -eta_turb) - 1) * -1) ** (k_g / (k_g - 1)) * P_t4
+    #Nozzle efficiency is 1
+    T_t7 = T_t5
+    P_t7 = P_t5
+    return P_t7, T_t7
 
-P_t5,T_t5 = station_5(m_air,m_fuel,cp_g,TIT,W_comp,eta_turb,P_t4)
-P_t7,T_t7 = P_t5,T_t5
+P_t7_cruise,T_t7_cruise = station_5(m_air_cruise,m_fuel_cruise,cp_g,TIT_cruise,W_comp_cruise,eta_turb,P_t4_cruise)
 
-def station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g):
+#Total conditions in station 8
+def station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g,P_a):
     crit_ratio = (1-1/eta_noz*((k_g-1)/(k_g+1)))**(-k_g/(k_g-1))
     if P_t7/P_a>crit_ratio:
         P_8 = P_t7/crit_ratio
@@ -71,23 +84,14 @@ def station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g):
         nozzle_status = 'not choked'
     return F_G_calc, nozzle_status
 
-F_G_calc, nozzle_status = station_8(eta_noz,k_g,P_t7,T_t7,R,m_air,m_fuel,cp_g)
+F_G_cruise, nozzle_status = station_8(1,k_g,P_t7_cruise,T_t7_cruise,R,m_air_cruise,m_fuel_cruise,cp_g,P_a_cruise)
 
-print("Gross thrust at altitude:",F_G_calc)
+print("Gross thrust at flight condition is:",F_G_cruise,nozzle_status)
 
 def area_ratio(P_t7,P_t4,k_g):
     A_t_to_A_n = (P_t7/P_t4)**((k_g+1)/(2*k_g))
     return A_t_to_A_n
 
-
-A_t_to_A_n = area_ratio(P_t7,P_t4,k_g)
-
-def pressure_ratio(area_ratio,k):
-    pressureratio = area_ratio**((2*k)/(k+1))
-    return pressureratio
-
-Pt_07_to_Pt_04 = pressure_ratio(A_t_to_A_n,k_g)
+A_t_to_A_n = area_ratio(P_t7_cruise,P_t4_cruise,k_g)
 
 print("The turbine to propulsive nozzle area ratio is:", A_t_to_A_n)
-print("The turbine to propulsive nozzle pressure ratio is:", Pt_07_to_Pt_04)
-print("The nozzle is ",nozzle_status)
