@@ -246,8 +246,8 @@ def plot_meridional_gaspath2(stage_array, bladeheight_array, inner_radius, blade
         line, = plt.plot(vertices_x, vertices_y, styles[i], label=labels[i])
         handles.append(line)
 
-    plt.xlabel('Radius [m]')
-    plt.ylabel('Axial Length [m]')
+    plt.xlabel('Axial Length [m]')
+    plt.ylabel('Radius [m]')
     plt.yticks([i for i in np.arange(0., bladeheight_array[0]+inner_radius+0.1, 0.05)])
     plt.grid()
     plt.legend(handles=handles[:2])
