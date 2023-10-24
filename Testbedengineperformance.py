@@ -19,7 +19,7 @@ LHV = 43*10**6 #Lower heating value
 #Estimated values (These can be played with to ensure that the gross thrust is 15167 N at sea level)
 eta_comp = 0.8059 #Efficiency of assignment 1 for both compressors 0.9^2
 eta_turb = eta_comp*0.957 #Efficiency of assignment 1 for both turbines   0.877^2
-A_inlet = 0.624**2*np.pi #Inlet area calculater with the diameter of the viper engine
+A_inlet = (0.624/2)**2*np.pi #Inlet area calculater with the diameter of the viper engine
 
 #Initial calculations
 rho = P_a/(T_a*R) #kg/m^3
@@ -32,7 +32,7 @@ def total_conditions(P_a,T_a,k,M):
     T_t = T_a * (1 + (k - 1) / 2 * M ** 2)
     return P_t, T_t
 
-P_t, T_t = total_conditions(P_a,T_a,k_a,M_0)
+P_t, T_t = total_conditions(P_a,T_a,k_a,M)
 
 def station_3(P_t,T_t,k,cp_a,m_air,total_comp,eta_comp):
     P_t2 = P_t

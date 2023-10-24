@@ -13,7 +13,7 @@ m_air = 23.81           #kg/s
 if T_a == 288:
     total_PR = 5.5
 elif T_a == (288.15-0.0065*35000*0.3048):
-    total_PR = 6.5
+    total_PR = 6.5550785577094
 else:
     print("Error in start data")
     quit()
@@ -188,17 +188,69 @@ def calculate_blade_height(area, r_in):
     blade_height = np.sqrt(area / np.pi + r_in**2) - r_in
     return blade_height
 
+def get_linear_coefficients(x1, x2, y1, y2):
+    a = (y2 - y1)/(x2-x1)
+    b = y1 - a*x1
+    return a,b
+def linear_function(x,a,b):
+    return a*x+b
+
 def plot_meridional_gaspath(stage_array, bladeheight_array, inner_radius, blade_chord):
-    spacing = 0.005
-    last_stage = stage_array[-1]
-    for i in np.arange(1, last_stage + 1, 1):
-        i = int(i)
-        start_x = (i - 1) * blade_chord + (i - 1) * spacing
-        start_y = inner_radius + bladeheight_array[2*i-1]
-        vertices_x = [start_x, start_x + blade_chord, start_x + blade_chord, start_x, start_x]
-        vertices_y = [start_y, start_y,-1 * start_y, -1 * start_y, start_y]
+    spacing = 0.1
+    #last_stage = stage_array[-1]
+    bladeheight_array = bladeheight_array[1:]
+    range = np.arange(0, len(stage_array)-1, 1)
+    for i in np.arange(0, len(stage_array)-1, 1):
+        #i = int(i)
+        x_vertex_left = i * spacing + i * blade_chord
+        x_vertex_right = x_vertex_left + spacing
+
+        if i == 0:
+            y_vertex_left = bladeheight_array[i]
+            y_vertex_right = bladeheight_array[i]
+        else:
+            y_vertex_left = bladeheight_array[i-1]
+            y_vertex_right = bladeheight_array[i]
+
+        vertices_x = [x_vertex_left, x_vertex_right, x_vertex_right, x_vertex_left, x_vertex_left]
+        vertices_y = [y_vertex_left, y_vertex_right, 0., 0., y_vertex_left]
+
+        # start_x = (i - 1) * blade_chord + (i - 1) * spacing
+        # start_y = inner_radius + bladeheight_array[2*i-1]
+        # vertices_x = [start_x, start_x + blade_chord, start_x + blade_chord, start_x, start_x]
+        # vertices_y = [start_y, start_y,-1 * start_y, -1 * start_y, start_y]
 
         plt.plot(vertices_x, vertices_y, '--bo')
+    plt.show()
+    return
+
+def plot_meridional_gaspath2(stage_array, bladeheight_array, inner_radius, blade_chord):
+    spacing = 0.1
+    handles = []
+    styles = ['--bo', '--r^', '--bo', '--r^']
+    labels = ['After Rotor', 'After Stator', 'After Rotor', 'After Stator']
+    bladeheight_array = bladeheight_array[1:]
+    a, b = get_linear_coefficients(0., len(stage_array) * blade_chord + (len(stage_array)-1)*
+                                   spacing,bladeheight_array[0], bladeheight_array[-1])
+    for i in np.arange(0, len(stage_array)-1, 1):
+        #i = int(i)
+        x_vertex_left = i * spacing + i * blade_chord
+        x_vertex_right = x_vertex_left + spacing
+
+        y_vertex_left = linear_function(x_vertex_left, a, b) + inner_radius
+        y_vertex_right = linear_function(x_vertex_right, a, b) + inner_radius
+
+        vertices_x = [x_vertex_left, x_vertex_right, x_vertex_right, x_vertex_left, x_vertex_left]
+        vertices_y = [y_vertex_left, y_vertex_right, inner_radius, inner_radius, y_vertex_left]
+
+        line, = plt.plot(vertices_x, vertices_y, styles[i], label=labels[i])
+        handles.append(line)
+
+    plt.xlabel('Radius [m]')
+    plt.ylabel('Axial Length [m]')
+    plt.yticks([i for i in np.arange(0., bladeheight_array[0]+inner_radius+0.1, 0.05)])
+    plt.grid()
+    plt.legend(handles=handles[:2])
     plt.show()
     return
 
@@ -307,24 +359,21 @@ def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_
 
     axs[1, 1].plot([stagenr_array[2], stagenr_array[4]], [PR_array[2], PR_array[4]])
     axs[1, 1].set_xticks([i for i in np.arange(1,2.5, 0.5)])
-    axs[1, 1].set_yticks([i for i in np.arange(2, 2.6, 0.1)])
+    axs[1, 1].set_yticks([i for i in np.arange(2, 3., 0.1)])
     axs[1, 1].grid()
     axs[1, 1].set_xlabel('Stage Number')
     axs[1, 1].set_ylabel(r'$\beta_{stage}$ [-]')
 
     fig.set_size_inches(9.5, 6.5)
     fig.savefig("thermodynamic-properties-stage-flight.svg", format="svg", bbox_inches='tight')
-    #plt.show()
 
     fig2 = plt.figure(2)
     plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U, plt)
     fig2.savefig("velocity-triangles-flight.svg", format="svg", bbox_inches='tight')
-    #plt.show()
 
     fig3 = plt.figure(3)
     plot_h_s_diagram(entropy_array, enthalpy_array, plt)
     fig3.savefig("h-s-diagram-flight.svg", format="svg", bbox_inches='tight')
-    plt.show()
 
 
     # axs[1, 2].plot(stagenr_array, bladeheight_array, label='Blade Height')
@@ -347,9 +396,11 @@ eta_comp = 0.91
 # eta_comp = 1.
 
 R = 0.5
-r_in = 0.05
+r_in = 0.10
 blade_chord = 0.04      #[m]
 
 stagenr_array, bladeheight_array = compressor_design(eta_comp, total_PR, m_air, R, work_coef, flow_coef, r_in)
-plot_meridional_gaspath(stagenr_array, bladeheight_array, r_in, blade_chord)
+fig4 = plt.figure(4)
+plot_meridional_gaspath2(stagenr_array, bladeheight_array, r_in, blade_chord)
+fig4.savefig("meridional-gas-path-flight.svg", format="svg", bbox_inches='tight')
 plt.show()
