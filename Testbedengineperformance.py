@@ -1,31 +1,31 @@
 import numpy as np
 
-print("Testbed performance ---------------------------------------------------------")
+print("Conditions: Testbed performance")
 #Datasheet
-F_G = 15167                     #N
-m_air = 23.81                   #kg/s
-m_fuel = 0.4267                 #kg/s
-total_comp = 5.5                #-
-T_a = 288                       #K
-P_a = 100000                    #Pa
-R = 287                         #J/K*mol
-k_a = 1.4                       #-
-k_g = 1.33                      #-
-cp_a = 1000                     #J/kg K
-cp_g = 1150                     #J/kg K
+F_G = 15167 #N
+m_air = 23.81 #kg/s
+m_fuel = 0.4267 #kg/s
+total_comp = 5.5 #-
+T_a = 288 #K
+P_a = 100000 #Pa
+R = 287 #J/K*mol
+k_a = 1.4 #-
+k_g = 1.33 #-
+cp_a = 1000 #J/kg K
+cp_g = 1150 #J/kg K
 eta_noz = 1
-LHV = 43*10**6                  #Lower heating value
+LHV = 43*10**6 #Lower heating value
 
 #Estimated values (These can be played with to ensure that the gross thrust is 15167 N at sea level)
-eta_comp = 0.8065               #0.8059 #Efficiency of assignment 1 for both compressors 0.9^2
-eta_turb = eta_comp*0.957       #Efficiency of assignment 1 for both turbines   0.877^2
-A_inlet = (0.624/2)**2*np.pi    #Inlet area calculater with the diameter of the viper engine
+eta_comp = 0.8059 #Efficiency of assignment 1 for both compressors 0.9^2
+eta_turb = eta_comp*0.957 #Efficiency of assignment 1 for both turbines   0.877^2
+A_inlet = 0.624**2*np.pi #Inlet area calculater with the diameter of the viper engine
 
 #Initial calculations
-rho = P_a/(T_a*R)               #kg/m^3
-v_0 = 0                         #m_air/(rho*A_inlet)
+rho = P_a/(T_a*R) #kg/m^3
+v_0 = m_air/(rho*A_inlet)
 a_0 = np.sqrt(k_a*R*T_a)
-M_0 = v_0/a_0
+M = v_0/a_0
 
 def total_conditions(P_a,T_a,k,M):
     P_t = P_a*(1+(k-1)/2*M**2)**(k/(k-1))

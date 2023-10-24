@@ -1,7 +1,7 @@
 import numpy as np
 from Testbedengineperformance import A_inlet,eta_comp,eta_turb
 
-print("Flight performance ---------------------------------------------------------")
+print("Conditions: Flight performance")
 
 #Datasheet
 total_comp = 5.5 #-
