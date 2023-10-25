@@ -257,7 +257,7 @@ def plot_meridional_gaspath2(stage_array, bladeheight_array, inner_radius, blade
 def plot_h_s_diagram(entropy, enthalpy, pos):
     pos.plot(entropy, enthalpy)
     pos.xlabel(r"$\Delta$ Entropy [J/kg]")
-    pos.ylabel(r"$\Delta$ Enthalpy [J]")
+    pos.ylabel(r"$\Delta$ Enthalpy [J\kg]")
     pos.grid()
     return
 def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_in):
@@ -357,19 +357,20 @@ def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_
     axs[1, 0].set_xlabel('Stage Number')
     axs[1, 0].set_ylabel(r'$T_{t}/T_{t0}$ [-]')
 
-    axs[1, 1].plot([stagenr_array[2], stagenr_array[4]], [PR_array[2], PR_array[4]])
-    axs[1, 1].set_xticks([i for i in np.arange(1,2.5, 0.5)])
-    axs[1, 1].set_yticks([i for i in np.arange(2, 3., 0.1)])
+    #axs[1, 1].plot([stagenr_array[2], stagenr_array[4]], [PR_array[2], PR_array[4]])
+    axs[1, 1].plot(stagenr_array[1:], PR_array[1:])
+    axs[1, 1].set_xticks([i for i in np.arange(1,int(len(stagenr_array)/2), 0.5)])
+    axs[1, 1].set_yticks([i for i in np.arange(min(PR_array[1:]), max(PR_array)+0.1, 0.1)])
     axs[1, 1].grid()
     axs[1, 1].set_xlabel('Stage Number')
     axs[1, 1].set_ylabel(r'$\beta_{stage}$ [-]')
 
     fig.set_size_inches(9.5, 6.5)
-    fig.savefig("thermodynamic-properties-stage-flight.svg", format="svg", bbox_inches='tight')
+    #fig.savefig("thermodynamic-properties-stage-flight.svg", format="svg", bbox_inches='tight')
 
     fig2 = plt.figure(2)
     plot_velocity_triangles(V_1, W_1, alpha1, beta1, V_2, W_2, alpha2, beta2, U, plt)
-    fig2.savefig("velocity-triangles-flight.svg", format="svg", bbox_inches='tight')
+    #fig2.savefig("velocity-triangles-flight.svg", format="svg", bbox_inches='tight')
 
     fig3 = plt.figure(3)
     plot_h_s_diagram(entropy_array, enthalpy_array, plt)
@@ -387,20 +388,20 @@ def compressor_design(eta_comp, total_PR, mass_flow, R, work_coef, flow_coef, r_
 
 
 # # Example usage:
-work_coef = 0.38
-flow_coef = 0.77
-eta_comp = 0.91
+# work_coef = 0.38
+# flow_coef = 0.77
+# eta_comp = 0.91
 
-# work_coef = 0.1
-# flow_coef = 0.2
-# eta_comp = 1.
+work_coef = 0.2
+flow_coef = 0.2
+eta_comp = 0.92
 
 R = 0.5
 r_in = 0.10
 blade_chord = 0.04      #[m]
 
 stagenr_array, bladeheight_array = compressor_design(eta_comp, total_PR, m_air, R, work_coef, flow_coef, r_in)
-fig4 = plt.figure(4)
-plot_meridional_gaspath2(stagenr_array, bladeheight_array, r_in, blade_chord)
-fig4.savefig("meridional-gas-path-flight.svg", format="svg", bbox_inches='tight')
+#fig4 = plt.figure(4)
+#plot_meridional_gaspath2(stagenr_array, bladeheight_array, r_in, blade_chord)
+#fig4.savefig("meridional-gas-path-flight.svg", format="svg", bbox_inches='tight')
 plt.show()
