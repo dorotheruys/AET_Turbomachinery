@@ -256,7 +256,7 @@ def plot_meridional_gaspath2(stage_array, bladeheight_array, inner_radius, blade
 
 def plot_h_s_diagram(entropy, enthalpy, pos):
     pos.plot(entropy, enthalpy)
-    pos.xlabel(r"$\Delta$ Entropy [J/kg]")
+    pos.xlabel(r"$\Delta$ Entropy [J/kg K]")
     pos.ylabel(r"$\Delta$ Enthalpy [J\kg]")
     pos.grid()
     return
